@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arklets — Batch Card Creator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 960px; margin: 0 auto; padding: 16px; color: #1a1a1a; background: #fff; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 16px; }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: 0.9rem; }
+  textarea { width: 100%; height: 120px; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+  input[type=text] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  button { padding: 8px 14px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; cursor: pointer; font-size: 0.85rem; }
+  button:hover { background: #eee; }
+  button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  button.primary:hover { background: #333; }
+  .stats { font-size: 0.85rem; color: #555; margin: 4px 0; }
+  .warn { color: #c00; font-weight: 600; }
+  .ok { color: #080; }
+  a { color: #1a73e8; }
+  hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+  .nav { font-size: 0.85rem; margin-bottom: 12px; }
+  .nav a { margin-right: 12px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; margin-bottom: 12px; }
+  .tab { padding: 8px 16px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; font-size: 0.85rem; }
+  .tab:first-child { border-radius: 4px 0 0 4px; }
+  .tab:last-child { border-radius: 0 4px 4px 0; }
+  .tab.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Card grid */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+  .card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #fafafa; }
+  .card h3 { font-size: 0.95rem; margin-bottom: 2px; }
+  .card .card-num { color: #888; font-size: 0.8rem; }
+  .card .card-content { font-family: monospace; font-size: 11px; white-space: pre-wrap; background: #f0f0f0; padding: 6px; border-radius: 3px; margin: 6px 0; max-height: 100px; overflow-y: auto; }
+  .card canvas { max-width: 100%; margin-top: 6px; }
+
+  /* Checkbox */
+  .checkbox-row { display: flex; align-items: center; gap: 6px; margin: 8px 0; font-size: 0.9rem; }
+
+  /* Item list for manual entry */
+  .item-list { margin: 8px 0; }
+  .item-entry { border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin-bottom: 6px; background: #fafafa; position: relative; }
+  .item-entry .remove-btn { position: absolute; top: 6px; right: 8px; background: none; border: none; color: #c00; cursor: pointer; font-size: 1rem; padding: 0; }
+
+  /* Print styles */
+  @media print {
+    body { max-width: 100%; padding: 0; margin: 0; }
+    .no-print { display: none !important; }
+    .card-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .card { break-inside: avoid; page-break-inside: avoid; border: 1px solid #999; }
+    .card canvas { width: 200px !important; height: 200px !important; }
+  }
+</style>
+</head>
+<body>
+<div class="nav no-print"><a href="index.html">Home</a> <a href="encoder.html">Encoder</a> <a href="decoder.html">Decoder</a></div>
+<h1 class="no-print">Arklets Batch Card Creator</h1>
+<p class="subtitle no-print">Create multiple encoded content cards at once. Print them as a self-contained card sheet.</p>
+
+<div class="no-print">
+  <div class="tabs">
+    <div class="tab active" data-tab="json">Paste JSON</div>
+    <div class="tab" data-tab="file">Upload File</div>
+    <div class="tab" data-tab="manual">Add Items</div>
+  </div>
+
+  <!-- JSON tab -->
+  <div class="tab-panel active" id="panel-json">
+    <textarea id="json-input" placeholder='Paste a JSON array or {"cards": [...]} here...'></textarea>
+  </div>
+
+  <!-- File tab -->
+  <div class="tab-panel" id="panel-file">
+    <label>Upload .json file</label>
+    <input type="file" id="file-input" accept=".json">
+    <div id="file-status" class="stats"></div>
+  </div>
+
+  <!-- Manual tab -->
+  <div class="tab-panel" id="panel-manual">
+    <div id="item-list" class="item-list"></div>
+    <button id="btn-add-item">+ Add Item</button>
+  </div>
+
+  <hr>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="card0-toggle" checked>
+    <label for="card0-toggle" style="margin:0;font-weight:normal">Include Card #0 (Decoder QR) as first card</label>
+  </div>
+
+  <div class="btn-row">
+    <button class="primary" id="btn-generate">Generate Cards</button>
+    <button id="btn-test">Test Round-Trip</button>
+    <button id="btn-print">Print Cards</button>
+  </div>
+
+  <div id="status" class="stats"></div>
+</div>
+
+<div class="card-grid" id="card-grid"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+const DECODER_BASE_URL = 'decoder.html';
+const QR_BYTE_LIMIT = 2953;
+
+// --- Compression helpers ---
+
+function toUrlSafeBase64(bytes) {
+  const bin = Array.from(bytes, b => String.fromCharCode(b)).join('');
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromUrlSafeBase64(s) {
+  let t = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  const bin = atob(t);
+  const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+
+async function compress(text) {
+  const input = new TextEncoder().encode(text);
+  const cs = new CompressionStream('deflate-raw');
+  const writer = cs.writable.getWriter();
+  writer.write(input);
+  writer.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+
+async function decompress(bytes) {
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+}
+
+async function encode(text) {
+  return toUrlSafeBase64(await compress(text));
+}
+
+async function decode(encoded) {
+  return decompress(fromUrlSafeBase64(encoded));
+}
+
+// --- Tab switching ---
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  };
+});
+
+// --- File upload ---
+
+document.getElementById('file-input').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    document.getElementById('json-input').value = reader.result;
+    document.getElementById('file-status').textContent = `Loaded: ${file.name} (${reader.result.length} chars)`;
+    // Switch to JSON tab to show loaded content
+    document.querySelector('.tab[data-tab="json"]').click();
+  };
+  reader.readAsText(file);
+};
+
+// --- Manual entry ---
+
+let itemCounter = 0;
+
+function addManualItem(title = '', content = '') {
+  itemCounter++;
+  const div = document.createElement('div');
+  div.className = 'item-entry';
+  div.innerHTML = `
+    <button class="remove-btn" title="Remove">&times;</button>
+    <input type="text" placeholder="Title" value="${title.replace(/"/g, '&quot;')}" class="item-title" style="margin-bottom:4px">
+    <textarea placeholder="Content..." class="item-content" style="height:60px">${content}</textarea>
+  `;
+  div.querySelector('.remove-btn').onclick = () => div.remove();
+  document.getElementById('item-list').appendChild(div);
+}
+
+document.getElementById('btn-add-item').onclick = () => addManualItem();
+
+// Start with one empty item
+addManualItem();
+
+// --- Parse items from any input method ---
+
+function getItems() {
+  // Check which tab is active
+  const activeTab = document.querySelector('.tab.active').dataset.tab;
+
+  if (activeTab === 'manual') {
+    const entries = document.querySelectorAll('.item-entry');
+    const items = [];
+    entries.forEach((entry, i) => {
+      const title = entry.querySelector('.item-title').value.trim();
+      const content = entry.querySelector('.item-content').value.trim();
+      if (content) {
+        items.push({ number: i + 1, title: title || `Item ${i + 1}`, content });
+      }
+    });
+    return items;
+  }
+
+  // JSON input (from paste or file upload)
+  const raw = document.getElementById('json-input').value.trim();
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    const arr = Array.isArray(parsed) ? parsed : (parsed.cards || []);
+    return arr.map((item, i) => ({
+      number: item.number || i + 1,
+      title: item.title || `Item ${i + 1}`,
+      description: item.description || '',
+      content: item.content || (typeof item === 'string' ? item : JSON.stringify(item))
+    }));
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+    return [];
+  }
+}
+
+// --- Generate cards ---
+
+document.getElementById('btn-generate').onclick = async () => {
+  const items = getItems();
+  if (!items.length) { alert('No items to encode.'); return; }
+
+  const grid = document.getElementById('card-grid');
+  grid.innerHTML = '';
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = 'Generating...';
+
+  const includeCard0 = document.getElementById('card0-toggle').checked;
+
+  // Card #0: Decoder QR
+  if (includeCard0) {
+    try {
+      const resp = await fetch('decoder.html');
+      const html = await resp.text();
+      const dataUri = 'data:text/html;base64,' + btoa(html);
+      const card = makeCardEl('#0', 'Decoder (Card #0)', 'Scan to get the Arklets decoder — no internet needed.', dataUri.length);
+      grid.appendChild(card);
+      const fits = dataUri.length <= QR_BYTE_LIMIT;
+      const warn = card.querySelector('.card-warn');
+      if (!fits) warn.innerHTML = `<span class="warn">Data URI: ${dataUri.length} chars — exceeds QR limit</span>`;
+      else warn.innerHTML = `<span class="ok">Data URI: ${dataUri.length} chars — fits in QR</span>`;
+      await QRCode.toCanvas(card.querySelector('canvas'), dataUri, { width: 240, margin: 2 });
+    } catch (e) {
+      const card = makeCardEl('#0', 'Decoder (Card #0)', 'Error: ' + e.message, 0);
+      grid.appendChild(card);
+    }
+  }
+
+  // Content cards
+  for (const item of items) {
+    try {
+      const encoded = await encode(item.content);
+      const url = DECODER_BASE_URL + '#' + encoded;
+      const card = makeCardEl('#' + item.number, item.title, item.content, encoded.length);
+      grid.appendChild(card);
+
+      const warn = card.querySelector('.card-warn');
+      if (url.length > QR_BYTE_LIMIT) {
+        warn.innerHTML = `<span class="warn">${encoded.length} bytes — exceeds QR limit</span>`;
+      } else {
+        warn.innerHTML = `<span class="ok">${encoded.length} bytes encoded</span>`;
+      }
+
+      await QRCode.toCanvas(card.querySelector('canvas'), url, { width: 240, margin: 2 });
+    } catch (e) {
+      const card = makeCardEl('#' + item.number, item.title, 'Error: ' + e.message, 0);
+      grid.appendChild(card);
+    }
+  }
+
+  statusEl.textContent = `Generated ${items.length} card(s)` + (includeCard0 ? ' + Card #0' : '');
+};
+
+function makeCardEl(num, title, content, bytes) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.innerHTML = `
+    <span class="card-num">${num}</span>
+    <h3>${escHtml(title)}</h3>
+    <div class="card-content">${escHtml(content.substring(0, 200))}${content.length > 200 ? '...' : ''}</div>
+    <div class="card-warn stats"></div>
+    <canvas></canvas>
+  `;
+  return div;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// --- Round-trip test ---
+
+document.getElementById('btn-test').onclick = async () => {
+  const items = getItems();
+  if (!items.length) { alert('No items to test.'); return; }
+
+  const statusEl = document.getElementById('status');
+  let pass = 0, fail = 0;
+
+  for (const item of items) {
+    try {
+      const encoded = await encode(item.content);
+      const decoded = await decode(encoded);
+      if (decoded === item.content) {
+        pass++;
+      } else {
+        fail++;
+        console.error(`Mismatch for "${item.title}":`, { original: item.content, decoded });
+      }
+    } catch (e) {
+      fail++;
+      console.error(`Error testing "${item.title}":`, e);
+    }
+  }
+
+  if (fail === 0) {
+    statusEl.innerHTML = `<span class="ok">All ${pass} cards passed round-trip test.</span>`;
+  } else {
+    statusEl.innerHTML = `<span class="warn">${fail} of ${pass + fail} cards failed round-trip test. Check console.</span>`;
+  }
+};
+
+// --- Print ---
+
+document.getElementById('btn-print').onclick = () => {
+  if (!document.querySelector('.card')) {
+    alert('Generate cards first.');
+    return;
+  }
+  window.print();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arklets — Encoder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 0 auto; padding: 16px; color: #1a1a1a; background: #fff; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 16px; }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: 0.9rem; }
+  textarea { width: 100%; height: 160px; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  button { padding: 8px 14px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; cursor: pointer; font-size: 0.85rem; }
+  button:hover { background: #eee; }
+  button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  button.primary:hover { background: #333; }
+  .stats { font-size: 0.85rem; color: #555; margin: 8px 0; }
+  .output-box { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 12px; word-break: break-all; white-space: pre-wrap; max-height: 200px; overflow-y: auto; margin: 8px 0; }
+  #qr-section, #card0-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; }
+  #qr-canvas, #card0-canvas { margin: 8px 0; }
+  canvas { max-width: 100%; }
+  .warn { color: #c00; font-weight: 600; }
+  .ok { color: #080; }
+  a { color: #1a73e8; }
+  hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+  .nav { font-size: 0.85rem; margin-bottom: 12px; }
+  .nav a { margin-right: 12px; }
+</style>
+</head>
+<body>
+<div class="nav"><a href="index.html">Home</a> <a href="decoder.html">Decoder</a> <a href="batch.html">Batch</a></div>
+<h1>Arklets Encoder</h1>
+<p class="subtitle">Compress text into a URL fragment. No server needed.</p>
+
+<label for="input">Content</label>
+<textarea id="input" placeholder="Type or paste text here..."></textarea>
+
+<div class="btn-row">
+  <button class="primary" id="btn-encode">Encode</button>
+  <button id="btn-copy-data">Copy Encoded</button>
+  <button id="btn-copy-url">Copy as URL</button>
+  <button id="btn-clear">Clear</button>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="output-box" id="output" style="display:none"></div>
+
+<div id="qr-section" style="display:none">
+  <label>Content QR Code</label>
+  <div id="qr-status" class="stats"></div>
+  <canvas id="qr-canvas"></canvas>
+</div>
+
+<hr>
+
+<div id="card0-section">
+  <label>Card #0 — Decoder QR</label>
+  <p class="stats">The decoder itself as a <code>data:text/html;base64,...</code> QR code. Scan to get a working decoder — no internet needed.</p>
+  <button id="btn-card0">Generate Decoder QR</button>
+  <div id="card0-status" class="stats"></div>
+  <canvas id="card0-canvas"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+const DECODER_BASE_URL = 'decoder.html';
+const QR_BYTE_LIMIT = 2953;
+
+// --- Encode / Decode helpers ---
+
+function toUrlSafeBase64(bytes) {
+  const bin = Array.from(bytes, b => String.fromCharCode(b)).join('');
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromUrlSafeBase64(s) {
+  let t = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  const bin = atob(t);
+  const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+
+async function compress(text) {
+  const input = new TextEncoder().encode(text);
+  const cs = new CompressionStream('deflate-raw');
+  const writer = cs.writable.getWriter();
+  writer.write(input);
+  writer.close();
+  const output = await new Response(cs.readable).arrayBuffer();
+  return new Uint8Array(output);
+}
+
+async function decompress(bytes) {
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+}
+
+async function encode(text) {
+  const compressed = await compress(text);
+  return toUrlSafeBase64(compressed);
+}
+
+// --- UI ---
+
+const inputEl = document.getElementById('input');
+const outputEl = document.getElementById('output');
+const statsEl = document.getElementById('stats');
+let currentEncoded = '';
+
+document.getElementById('btn-encode').onclick = async () => {
+  const text = inputEl.value;
+  if (!text) return;
+  try {
+    currentEncoded = await encode(text);
+    const origBytes = new TextEncoder().encode(text).length;
+    const encBytes = currentEncoded.length;
+    const ratio = ((1 - encBytes / origBytes) * 100).toFixed(1);
+
+    outputEl.textContent = currentEncoded;
+    outputEl.style.display = 'block';
+    statsEl.innerHTML = `Original: <b>${origBytes}</b> bytes → Encoded: <b>${encBytes}</b> chars (${ratio}% reduction)`;
+
+    // QR code for content URL
+    const url = DECODER_BASE_URL + '#' + currentEncoded;
+    const qrSection = document.getElementById('qr-section');
+    const qrStatus = document.getElementById('qr-status');
+    qrSection.style.display = 'block';
+
+    if (url.length > QR_BYTE_LIMIT) {
+      qrStatus.innerHTML = `<span class="warn">URL is ${url.length} chars — exceeds QR limit of ~${QR_BYTE_LIMIT}.</span>`;
+    } else {
+      qrStatus.innerHTML = `<span class="ok">URL is ${url.length} chars — fits in QR code.</span>`;
+    }
+
+    try {
+      await QRCode.toCanvas(document.getElementById('qr-canvas'), url, { width: 300, margin: 2 });
+    } catch (e) {
+      qrStatus.innerHTML = `<span class="warn">QR generation failed: ${e.message}. Data may be too large.</span>`;
+    }
+  } catch (e) {
+    statsEl.textContent = 'Error: ' + e;
+  }
+};
+
+document.getElementById('btn-copy-data').onclick = () => {
+  if (currentEncoded) navigator.clipboard.writeText(currentEncoded);
+};
+
+document.getElementById('btn-copy-url').onclick = () => {
+  if (currentEncoded) {
+    const url = location.href.replace(/encoder\.html.*/, DECODER_BASE_URL + '#' + currentEncoded);
+    navigator.clipboard.writeText(url);
+  }
+};
+
+document.getElementById('btn-clear').onclick = () => {
+  inputEl.value = '';
+  outputEl.style.display = 'none';
+  outputEl.textContent = '';
+  statsEl.textContent = '';
+  currentEncoded = '';
+  document.getElementById('qr-section').style.display = 'none';
+};
+
+// --- Card #0: Decoder QR ---
+
+document.getElementById('btn-card0').onclick = async () => {
+  const statusEl = document.getElementById('card0-status');
+  statusEl.textContent = 'Fetching decoder...';
+
+  try {
+    const resp = await fetch('decoder.html');
+    const html = await resp.text();
+    const dataUri = 'data:text/html;base64,' + btoa(html);
+
+    const fits = dataUri.length <= QR_BYTE_LIMIT;
+    statusEl.innerHTML = `Data URI: <b>${dataUri.length}</b> chars. ` +
+      (fits
+        ? '<span class="ok">Fits within QR limit.</span>'
+        : `<span class="warn">Exceeds QR limit of ~${QR_BYTE_LIMIT} by ${dataUri.length - QR_BYTE_LIMIT} chars.</span>`);
+
+    await QRCode.toCanvas(document.getElementById('card0-canvas'), dataUri, { width: 300, margin: 2 });
+  } catch (e) {
+    statusEl.innerHTML = `<span class="warn">Error: ${e.message}. Make sure decoder.html is in the same directory.</span>`;
+  }
+};
+</script>
+</body>
+</html>

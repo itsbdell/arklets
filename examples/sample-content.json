@@ -1,0 +1,22 @@
+{
+  "cards": [
+    {
+      "number": 1,
+      "title": "Classic Pancake Recipe",
+      "description": "Simple pancakes from scratch",
+      "content": "CLASSIC PANCAKES\n\n1 cup flour, 1 tbsp sugar, 1 tsp baking powder, 1/2 tsp salt\nMix dry. Add 1 cup milk, 1 egg, 2 tbsp melted butter.\nStir until just combined (lumps OK).\n\nHeat griddle to 375°F. Pour 1/4 cup per pancake.\nFlip when bubbles form and edges set (~2 min).\nCook 1-2 min more. Makes ~8 pancakes."
+    },
+    {
+      "number": 2,
+      "title": "Contact Card",
+      "description": "Example contact info",
+      "content": "JANE SMITH\nSoftware Engineer\njane@example.com\n+1 (555) 123-4567\n\nGitHub: github.com/janesmith\nLinkedIn: linkedin.com/in/janesmith\n\nBased in Portland, OR"
+    },
+    {
+      "number": 3,
+      "title": "Poem",
+      "description": "A short poem encoded in a URL",
+      "content": "THE ROAD NOT TAKEN (excerpt)\nby Robert Frost\n\nTwo roads diverged in a yellow wood,\nAnd sorry I could not travel both\nAnd be one traveler, long I stood\nAnd looked down one as far as I could\nTo where it bent in the undergrowth."
+    }
+  ]
+}

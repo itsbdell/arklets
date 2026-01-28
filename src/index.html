@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arklets — The link is the content</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.6; }
+  .container { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Header */
+  header { text-align: center; padding: 48px 0 32px; }
+  header h1 { font-size: 2.2rem; letter-spacing: -0.02em; }
+  header .tagline { color: #555; font-size: 1.1rem; margin-top: 8px; }
+
+  /* Sections */
+  section { margin: 32px 0; }
+  h2 { font-size: 1.2rem; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+
+  /* Pipeline */
+  .pipeline { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; font-size: 0.9rem; }
+  .pipeline .step { background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 6px 12px; }
+  .pipeline .arrow { color: #999; font-weight: bold; }
+
+  /* Properties */
+  .props { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 12px 0; }
+  .prop { text-align: center; padding: 12px; background: #fafafa; border: 1px solid #eee; border-radius: 6px; }
+  .prop strong { display: block; font-size: 0.9rem; }
+  .prop span { font-size: 0.8rem; color: #666; }
+
+  /* Demo */
+  .demo { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; }
+  .demo label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+  .demo textarea { width: 100%; height: 80px; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+  .demo-output { font-family: monospace; font-size: 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; padding: 8px; word-break: break-all; margin: 8px 0; min-height: 32px; }
+  .demo .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  button { padding: 8px 14px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; cursor: pointer; font-size: 0.85rem; }
+  button:hover { background: #eee; }
+  button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  button.primary:hover { background: #333; }
+  .demo .stats { font-size: 0.8rem; color: #555; margin: 4px 0; }
+  .ok { color: #080; }
+
+  /* Tools */
+  .tools { list-style: none; padding: 0; }
+  .tools li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+  .tools li:last-child { border-bottom: none; }
+  .tools a { font-weight: 600; }
+  .tools .desc { color: #666; font-size: 0.85rem; }
+
+  /* Footer */
+  footer { text-align: center; color: #999; font-size: 0.8rem; padding: 32px 0 16px; border-top: 1px solid #eee; margin-top: 32px; }
+  footer a { color: #666; }
+  a { color: #1a73e8; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Arklets</h1>
+  <p class="tagline">Small arks. Self-contained vessels of knowledge encoded directly into URLs.</p>
+  <p style="margin-top:4px;color:#888;font-size:0.9rem">No server needed. The link <em>is</em> the content.</p>
+</header>
+
+<section>
+  <h2>How It Works</h2>
+  <div class="pipeline">
+    <span class="step">Text</span>
+    <span class="arrow">&rarr;</span>
+    <span class="step">Deflate compress</span>
+    <span class="arrow">&rarr;</span>
+    <span class="step">Base64 encode</span>
+    <span class="arrow">&rarr;</span>
+    <span class="step">URL #fragment</span>
+  </div>
+  <p style="font-size:0.9rem;color:#555;margin-top:8px">
+    The <code>#fragment</code> part of a URL is never sent to any server — it stays entirely in your browser.
+    That means the content is private, serverless, and permanent: if you have the URL, you have the content.
+  </p>
+</section>
+
+<section>
+  <div class="props">
+    <div class="prop"><strong>No Server</strong><span>Runs entirely in the browser</span></div>
+    <div class="prop"><strong>Permanent</strong><span>URL is the content — nothing to expire</span></div>
+    <div class="prop"><strong>Private</strong><span>#fragment never leaves the browser</span></div>
+    <div class="prop"><strong>Portable</strong><span>Works offline, in QR codes, on paper</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Try It</h2>
+  <div class="demo">
+    <label for="demo-input">Enter some text:</label>
+    <textarea id="demo-input" placeholder="Type anything here...">Hello from Arklets! This text is about to be compressed and encoded into a URL fragment.</textarea>
+
+    <div class="btn-row">
+      <button class="primary" id="demo-encode">Encode</button>
+      <button id="demo-decode">Decode</button>
+      <button id="demo-copy-url">Copy Link</button>
+    </div>
+
+    <label>Encoded:</label>
+    <div class="demo-output" id="demo-encoded"></div>
+
+    <label>Decoded:</label>
+    <div class="demo-output" id="demo-decoded" style="white-space:pre-wrap"></div>
+
+    <div class="stats" id="demo-stats"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Tools</h2>
+  <ul class="tools">
+    <li>
+      <a href="encoder.html">Encoder</a>
+      <span class="desc"> — Encode text, generate QR codes, download Decoder QR (Card #0)</span>
+    </li>
+    <li>
+      <a href="decoder.html">Decoder</a>
+      <span class="desc"> — Minimal decoder (~1.4KB). Reads URL fragment or pasted data.</span>
+    </li>
+    <li>
+      <a href="batch.html">Batch Card Creator</a>
+      <span class="desc"> — Create multiple cards at once, preview QR codes, print card sheets</span>
+    </li>
+  </ul>
+</section>
+
+<section>
+  <h2>Learn More</h2>
+  <p style="font-size:0.9rem">
+    Read the <a href="https://github.com/itsbdell/arklets">source on GitHub</a> or the
+    <a href="https://github.com/itsbdell/arklets/blob/main/docs/how-it-works.md">technical documentation</a>
+    for details on the encoding pipeline, QR code limits, and the Card #0 self-bootstrap concept.
+  </p>
+</section>
+
+<footer>
+  <p><strong>Arklets</strong> &mdash; MIT License</p>
+  <p>Created by <a href="https://github.com/itsbdell">Brian Dell</a>. Inspired by <a href="https://github.com/topaz/paste">topaz/paste</a> and <a href="https://github.com/otherjoel/poest">otherjoel/poest</a>.</p>
+</footer>
+
+</div>
+
+<script>
+// --- Compression helpers ---
+
+function toUrlSafeBase64(bytes) {
+  const bin = Array.from(bytes, b => String.fromCharCode(b)).join('');
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromUrlSafeBase64(s) {
+  let t = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  const bin = atob(t);
+  const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+
+async function compress(text) {
+  const input = new TextEncoder().encode(text);
+  const cs = new CompressionStream('deflate-raw');
+  const writer = cs.writable.getWriter();
+  writer.write(input);
+  writer.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+
+async function decompress(bytes) {
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+}
+
+async function encode(text) {
+  return toUrlSafeBase64(await compress(text));
+}
+
+async function decode(encoded) {
+  return decompress(fromUrlSafeBase64(encoded));
+}
+
+// --- Demo UI ---
+
+let currentEncoded = '';
+
+document.getElementById('demo-encode').onclick = async () => {
+  const text = document.getElementById('demo-input').value;
+  if (!text) return;
+  try {
+    currentEncoded = await encode(text);
+    document.getElementById('demo-encoded').textContent = currentEncoded;
+    document.getElementById('demo-decoded').textContent = '';
+
+    const origBytes = new TextEncoder().encode(text).length;
+    const encBytes = currentEncoded.length;
+    const ratio = ((1 - encBytes / origBytes) * 100).toFixed(1);
+    document.getElementById('demo-stats').innerHTML =
+      `Original: ${origBytes} bytes &rarr; Encoded: ${encBytes} chars (${ratio}% reduction)`;
+  } catch (e) {
+    document.getElementById('demo-encoded').textContent = 'Error: ' + e;
+  }
+};
+
+document.getElementById('demo-decode').onclick = async () => {
+  if (!currentEncoded) return;
+  try {
+    const text = await decode(currentEncoded);
+    document.getElementById('demo-decoded').textContent = text;
+    document.getElementById('demo-stats').innerHTML += ' &mdash; <span class="ok">Round-trip verified</span>';
+  } catch (e) {
+    document.getElementById('demo-decoded').textContent = 'Error: ' + e;
+  }
+};
+
+document.getElementById('demo-copy-url').onclick = () => {
+  if (!currentEncoded) return;
+  const base = location.href.replace(/index\.html.*|$/, 'decoder.html');
+  const url = base + '#' + currentEncoded;
+  navigator.clipboard.writeText(url);
+  document.getElementById('demo-stats').innerHTML += ' &mdash; Link copied!';
+};
+</script>
+</body>
+</html>
