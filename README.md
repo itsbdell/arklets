@@ -4,7 +4,7 @@
 
 Encode text directly into URLs. No server. The link is the content.
 
-**[Live Demo](https://itsbdell.github.io/arklets/)**
+**[Live Demo](https://www.briandell.xyz/arklets/)**
 
 ## How It Works
 
@@ -23,7 +23,7 @@ The `#fragment` part of a URL is never sent to any server — it stays entirely 
 
 ## Quick Start
 
-Open the live demo at **[itsbdell.github.io/arklets](https://itsbdell.github.io/arklets/)**, or clone the repo and open `src/index.html` in your browser:
+Open the live demo at **[briandell.xyz/arklets](https://www.briandell.xyz/arklets/)**, or clone the repo and open `src/index.html` in your browser:
 
 ```bash
 git clone https://github.com/itsbdell/arklets.git
