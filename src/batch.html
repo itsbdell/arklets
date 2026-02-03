@@ -17,6 +17,10 @@
   button:hover { background: #eee; }
   button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
   button.primary:hover { background: #333; }
+  button.accent { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+  button.accent:hover { background: #1557b0; }
+  button.danger { color: #c00; border-color: #c00; }
+  button.danger:hover { background: #fdd; }
   .stats { font-size: 0.85rem; color: #555; margin: 4px 0; }
   .warn { color: #c00; font-weight: 600; }
   .ok { color: #080; }
@@ -24,6 +28,12 @@
   hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
   .nav { font-size: 0.85rem; margin-bottom: 12px; }
   .nav a { margin-right: 12px; }
+
+  /* Series metadata row */
+  .meta-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .meta-row .field { flex: 1; }
+  .meta-row label { margin-top: 0; }
+  .meta-row input { width: 100%; }
 
   /* Tabs */
   .tabs { display: flex; gap: 0; margin-bottom: 12px; }
@@ -34,6 +44,24 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
+  /* Batch counter */
+  .batch-counter { display: inline-flex; align-items: center; gap: 6px; background: #f0f7ff; border: 1px solid #b3d4fc; border-radius: 4px; padding: 6px 12px; font-size: 0.85rem; margin: 8px 0; }
+  .batch-counter strong { font-size: 1.1rem; color: #1a73e8; }
+
+  /* Interactive form */
+  .interactive-form { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; background: #fafafa; margin-bottom: 8px; }
+  .interactive-form .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .interactive-form .form-row .field { flex: 1; }
+  .interactive-form .form-row .field-sm { flex: 0 0 80px; }
+
+  /* Queued items list */
+  .queued-list { margin: 8px 0; }
+  .queued-item { display: flex; align-items: center; gap: 8px; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin-bottom: 4px; background: #fff; font-size: 0.85rem; }
+  .queued-item .q-num { font-weight: 700; color: #1a73e8; min-width: 28px; }
+  .queued-item .q-title { font-weight: 600; flex: 1; }
+  .queued-item .q-size { color: #888; font-size: 0.8rem; }
+  .queued-item .q-remove { background: none; border: none; color: #c00; cursor: pointer; font-size: 1rem; padding: 0 4px; }
+
   /* Card grid */
   .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
   .card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #fafafa; }
@@ -41,14 +69,10 @@
   .card .card-num { color: #888; font-size: 0.8rem; }
   .card .card-content { font-family: monospace; font-size: 11px; white-space: pre-wrap; background: #f0f0f0; padding: 6px; border-radius: 3px; margin: 6px 0; max-height: 100px; overflow-y: auto; }
   .card canvas { max-width: 100%; margin-top: 6px; }
+  .card .card-footer { font-family: monospace; font-size: 10px; color: #888; border-top: 1px solid #e0e0e0; padding-top: 6px; margin-top: 6px; }
 
   /* Checkbox */
   .checkbox-row { display: flex; align-items: center; gap: 6px; margin: 8px 0; font-size: 0.9rem; }
-
-  /* Item list for manual entry */
-  .item-list { margin: 8px 0; }
-  .item-entry { border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin-bottom: 6px; background: #fafafa; position: relative; }
-  .item-entry .remove-btn { position: absolute; top: 6px; right: 8px; background: none; border: none; color: #c00; cursor: pointer; font-size: 1rem; padding: 0; }
 
   /* Print styles */
   @media print {
@@ -57,37 +81,77 @@
     .card-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .card { break-inside: avoid; page-break-inside: avoid; border: 1px solid #999; }
     .card canvas { width: 200px !important; height: 200px !important; }
+    .card .card-footer { font-size: 9px; }
   }
 </style>
 </head>
 <body>
 <div class="nav no-print"><a href="index.html">Home</a> <a href="encoder.html">Encoder</a> <a href="decoder.html">Decoder</a></div>
 <h1 class="no-print">Arklets Batch Card Creator</h1>
-<p class="subtitle no-print">Create multiple encoded content cards at once. Print them as a self-contained card sheet.</p>
+<p class="subtitle no-print">Create, index, and generate batches of encoded content cards. Print as a self-contained card sheet.</p>
 
 <div class="no-print">
-  <div class="tabs">
-    <div class="tab active" data-tab="json">Paste JSON</div>
-    <div class="tab" data-tab="file">Upload File</div>
-    <div class="tab" data-tab="manual">Add Items</div>
+  <!-- Series metadata -->
+  <div class="meta-row">
+    <div class="field">
+      <label for="series-name">Series</label>
+      <input type="text" id="series-name" placeholder="e.g. Field Guide, Recipes, Contacts...">
+    </div>
+    <div class="field" style="flex:0 0 120px">
+      <label for="series-version">Version</label>
+      <input type="text" id="series-version" placeholder="1.0" value="1.0">
+    </div>
   </div>
 
-  <!-- JSON tab -->
+  <div class="tabs">
+    <div class="tab active" data-tab="json">Batch (JSON)</div>
+    <div class="tab" data-tab="file">Upload File</div>
+    <div class="tab" data-tab="interactive">Interactive</div>
+  </div>
+
+  <!-- JSON / Batch tab -->
   <div class="tab-panel active" id="panel-json">
-    <textarea id="json-input" placeholder='Paste a JSON array or {"cards": [...]} here...'></textarea>
+    <p class="stats" style="margin-bottom:8px">Load all items at once from an index. Paste JSON or use the file tab.</p>
+    <textarea id="json-input" placeholder='{"series":"...","version":"1.0","cards":[{"number":1,"title":"...","content":"..."},...]}'></textarea>
   </div>
 
   <!-- File tab -->
   <div class="tab-panel" id="panel-file">
-    <label>Upload .json file</label>
+    <label>Upload .json index file</label>
     <input type="file" id="file-input" accept=".json">
     <div id="file-status" class="stats"></div>
   </div>
 
-  <!-- Manual tab -->
-  <div class="tab-panel" id="panel-manual">
-    <div id="item-list" class="item-list"></div>
-    <button id="btn-add-item">+ Add Item</button>
+  <!-- Interactive tab -->
+  <div class="tab-panel" id="panel-interactive">
+    <p class="stats" style="margin-bottom:8px">Build items one at a time. Each item is queued until you generate the full set.</p>
+
+    <div class="interactive-form">
+      <div class="form-row">
+        <div class="field-sm">
+          <label style="margin-top:0">Item #</label>
+          <input type="text" id="int-number" value="1" style="text-align:center">
+        </div>
+        <div class="field">
+          <label style="margin-top:0">Title</label>
+          <input type="text" id="int-title" placeholder="Item title">
+        </div>
+      </div>
+      <label style="margin-top:0">Description (optional)</label>
+      <input type="text" id="int-description" placeholder="Short description visible without decoding" style="margin-bottom:8px">
+      <label style="margin-top:4px">Content</label>
+      <textarea id="int-content" placeholder="The full content to encode..." style="height:80px"></textarea>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="accent" id="btn-add-to-batch">Add to Batch</button>
+      </div>
+    </div>
+
+    <div class="batch-counter" id="batch-counter" style="display:none">
+      Queued: <strong id="batch-count">0</strong> item(s)
+      <button class="danger" id="btn-clear-batch" style="padding:4px 8px;font-size:0.8rem;margin-left:8px">Clear All</button>
+    </div>
+
+    <div class="queued-list" id="queued-list"></div>
   </div>
 
   <hr>
@@ -98,7 +162,7 @@
   </div>
 
   <div class="btn-row">
-    <button class="primary" id="btn-generate">Generate Cards</button>
+    <button class="primary" id="btn-generate">Generate All</button>
     <button id="btn-test">Test Round-Trip</button>
     <button id="btn-print">Print Cards</button>
   </div>
@@ -154,6 +218,20 @@ async function decode(encoded) {
   return decompress(fromUrlSafeBase64(encoded));
 }
 
+// --- CRC32 checksum ---
+
+function crc32(str) {
+  const bytes = new TextEncoder().encode(str);
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) {
+    crc ^= bytes[i];
+    for (let j = 0; j < 8; j++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+    }
+  }
+  return ((crc ^ 0xFFFFFFFF) >>> 0).toString(16).padStart(8, '0').toUpperCase();
+}
+
 // --- Tab switching ---
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -174,51 +252,100 @@ document.getElementById('file-input').onchange = (e) => {
   reader.onload = () => {
     document.getElementById('json-input').value = reader.result;
     document.getElementById('file-status').textContent = `Loaded: ${file.name} (${reader.result.length} chars)`;
-    // Switch to JSON tab to show loaded content
+    // Try to extract series metadata from the file
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (parsed.series) document.getElementById('series-name').value = parsed.series;
+      if (parsed.version) document.getElementById('series-version').value = parsed.version;
+    } catch (e) {}
     document.querySelector('.tab[data-tab="json"]').click();
   };
   reader.readAsText(file);
 };
 
-// --- Manual entry ---
+// --- Interactive batch queue ---
 
-let itemCounter = 0;
+let batchQueue = [];
 
-function addManualItem(title = '', content = '') {
-  itemCounter++;
-  const div = document.createElement('div');
-  div.className = 'item-entry';
-  div.innerHTML = `
-    <button class="remove-btn" title="Remove">&times;</button>
-    <input type="text" placeholder="Title" value="${title.replace(/"/g, '&quot;')}" class="item-title" style="margin-bottom:4px">
-    <textarea placeholder="Content..." class="item-content" style="height:60px">${content}</textarea>
-  `;
-  div.querySelector('.remove-btn').onclick = () => div.remove();
-  document.getElementById('item-list').appendChild(div);
+function updateBatchCounter() {
+  const counter = document.getElementById('batch-counter');
+  const countEl = document.getElementById('batch-count');
+  if (batchQueue.length > 0) {
+    counter.style.display = '';
+    countEl.textContent = batchQueue.length;
+  } else {
+    counter.style.display = 'none';
+  }
 }
 
-document.getElementById('btn-add-item').onclick = () => addManualItem();
+function renderQueuedList() {
+  const list = document.getElementById('queued-list');
+  list.innerHTML = '';
+  batchQueue.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'queued-item';
+    const contentBytes = new TextEncoder().encode(item.content).length;
+    div.innerHTML = `
+      <span class="q-num">#${item.number}</span>
+      <span class="q-title">${escHtml(item.title)}</span>
+      <span class="q-size">${contentBytes}B</span>
+      <button class="q-remove" title="Remove">&times;</button>
+    `;
+    div.querySelector('.q-remove').onclick = () => {
+      batchQueue.splice(i, 1);
+      renderQueuedList();
+      updateBatchCounter();
+    };
+    list.appendChild(div);
+  });
+}
 
-// Start with one empty item
-addManualItem();
+document.getElementById('btn-add-to-batch').onclick = () => {
+  const numEl = document.getElementById('int-number');
+  const titleEl = document.getElementById('int-title');
+  const descEl = document.getElementById('int-description');
+  const contentEl = document.getElementById('int-content');
 
-// --- Parse items from any input method ---
+  const content = contentEl.value.trim();
+  if (!content) { alert('Content is required.'); return; }
+
+  const num = parseInt(numEl.value) || (batchQueue.length + 1);
+  const title = titleEl.value.trim() || `Item ${num}`;
+  const description = descEl.value.trim();
+
+  batchQueue.push({ number: num, title, description, content });
+
+  // Auto-increment number, clear form fields
+  numEl.value = num + 1;
+  titleEl.value = '';
+  descEl.value = '';
+  contentEl.value = '';
+  titleEl.focus();
+
+  renderQueuedList();
+  updateBatchCounter();
+};
+
+document.getElementById('btn-clear-batch').onclick = () => {
+  if (batchQueue.length && !confirm('Clear all queued items?')) return;
+  batchQueue = [];
+  document.getElementById('int-number').value = '1';
+  renderQueuedList();
+  updateBatchCounter();
+};
+
+// --- Parse items from active input method ---
 
 function getItems() {
-  // Check which tab is active
   const activeTab = document.querySelector('.tab.active').dataset.tab;
 
-  if (activeTab === 'manual') {
-    const entries = document.querySelectorAll('.item-entry');
-    const items = [];
-    entries.forEach((entry, i) => {
-      const title = entry.querySelector('.item-title').value.trim();
-      const content = entry.querySelector('.item-content').value.trim();
-      if (content) {
-        items.push({ number: i + 1, title: title || `Item ${i + 1}`, content });
-      }
-    });
-    return items;
+  if (activeTab === 'interactive') {
+    return batchQueue.map((item, i) => ({
+      number: item.number || i + 1,
+      title: item.title || `Item ${i + 1}`,
+      description: item.description || '',
+      content: item.content
+    }));
   }
 
   // JSON input (from paste or file upload)
@@ -227,6 +354,15 @@ function getItems() {
 
   try {
     const parsed = JSON.parse(raw);
+
+    // Extract series metadata if present in JSON
+    if (parsed.series && !document.getElementById('series-name').value) {
+      document.getElementById('series-name').value = parsed.series;
+    }
+    if (parsed.version && document.getElementById('series-version').value === '1.0') {
+      document.getElementById('series-version').value = parsed.version;
+    }
+
     const arr = Array.isArray(parsed) ? parsed : (parsed.cards || []);
     return arr.map((item, i) => ({
       number: item.number || i + 1,
@@ -240,6 +376,13 @@ function getItems() {
   }
 }
 
+function getSeriesMeta() {
+  return {
+    series: document.getElementById('series-name').value.trim() || 'Untitled',
+    version: document.getElementById('series-version').value.trim() || '1.0'
+  };
+}
+
 // --- Generate cards ---
 
 document.getElementById('btn-generate').onclick = async () => {
@@ -251,6 +394,7 @@ document.getElementById('btn-generate').onclick = async () => {
   const statusEl = document.getElementById('status');
   statusEl.textContent = 'Generating...';
 
+  const meta = getSeriesMeta();
   const includeCard0 = document.getElementById('card0-toggle').checked;
 
   // Card #0: Decoder QR
@@ -259,7 +403,9 @@ document.getElementById('btn-generate').onclick = async () => {
       const resp = await fetch('decoder.html');
       const html = await resp.text();
       const dataUri = 'data:text/html;base64,' + btoa(html);
-      const card = makeCardEl('#0', 'Decoder (Card #0)', 'Scan to get the Arklets decoder — no internet needed.', dataUri.length);
+      const checksum = crc32(html);
+      const footer = `Card #0 | Checksum: ${checksum} | Series: ${meta.series}`;
+      const card = makeCardEl('#0', 'Decoder (Card #0)', 'Scan to get the Arklets decoder — no internet needed.', dataUri.length, footer);
       grid.appendChild(card);
       const fits = dataUri.length <= QR_BYTE_LIMIT;
       const warn = card.querySelector('.card-warn');
@@ -267,7 +413,7 @@ document.getElementById('btn-generate').onclick = async () => {
       else warn.innerHTML = `<span class="ok">Data URI: ${dataUri.length} chars — fits in QR</span>`;
       await QRCode.toCanvas(card.querySelector('canvas'), dataUri, { width: 240, margin: 2 });
     } catch (e) {
-      const card = makeCardEl('#0', 'Decoder (Card #0)', 'Error: ' + e.message, 0);
+      const card = makeCardEl('#0', 'Decoder (Card #0)', 'Error: ' + e.message, 0, '');
       grid.appendChild(card);
     }
   }
@@ -277,7 +423,9 @@ document.getElementById('btn-generate').onclick = async () => {
     try {
       const encoded = await encode(item.content);
       const url = DECODER_BASE_URL + '#' + encoded;
-      const card = makeCardEl('#' + item.number, item.title, item.content, encoded.length);
+      const checksum = crc32(encoded);
+      const footer = `Item #${item.number} | Checksum: ${checksum} | Series: ${meta.series}`;
+      const card = makeCardEl('#' + item.number, item.title, item.content, encoded.length, footer, item.description);
       grid.appendChild(card);
 
       const warn = card.querySelector('.card-warn');
@@ -289,23 +437,25 @@ document.getElementById('btn-generate').onclick = async () => {
 
       await QRCode.toCanvas(card.querySelector('canvas'), url, { width: 240, margin: 2 });
     } catch (e) {
-      const card = makeCardEl('#' + item.number, item.title, 'Error: ' + e.message, 0);
+      const card = makeCardEl('#' + item.number, item.title, 'Error: ' + e.message, 0, '');
       grid.appendChild(card);
     }
   }
 
-  statusEl.textContent = `Generated ${items.length} card(s)` + (includeCard0 ? ' + Card #0' : '');
+  statusEl.textContent = `Generated ${items.length} card(s)` + (includeCard0 ? ' + Card #0' : '') + ` — Series: ${meta.series} v${meta.version}`;
 };
 
-function makeCardEl(num, title, content, bytes) {
+function makeCardEl(num, title, content, bytes, footer, description) {
   const div = document.createElement('div');
   div.className = 'card';
   div.innerHTML = `
     <span class="card-num">${num}</span>
     <h3>${escHtml(title)}</h3>
+    ${description ? `<div class="stats">${escHtml(description)}</div>` : ''}
     <div class="card-content">${escHtml(content.substring(0, 200))}${content.length > 200 ? '...' : ''}</div>
     <div class="card-warn stats"></div>
     <canvas></canvas>
+    ${footer ? `<div class="card-footer">${escHtml(footer)}</div>` : ''}
   `;
   return div;
 }
