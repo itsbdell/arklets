@@ -28,20 +28,33 @@ Text → Deflate compress → Base64 encode → URL #fragment
 
 6. **Decoding** — The decoder reverses the process: strip the `#`, restore standard Base64 characters, decode to bytes, decompress with `DecompressionStream('deflate-raw')`, and decode the resulting UTF-8 bytes back to text.
 
-## Why Deflate?
+## Why Deflate (and not LZMA)?
 
 The decoder must fit inside a QR code as a `data:text/html;base64,...` URI. QR codes can hold roughly **2,953 bytes** of data (at the highest capacity level with low error correction).
 
-| Algorithm | Decoder size | Fits in QR? |
-|-----------|-------------|-------------|
-| **Deflate** (browser-native) | ~1.4 KB | Yes |
-| LZMA (JavaScript library) | ~5 KB+ | No |
-| Brotli (browser-native decode) | ~1.4 KB | Yes, but no `CompressionStream` for encoding |
+| Algorithm | Browser Native | Decoder Size | Fits in QR? |
+|-----------|----------------|--------------|-------------|
+| **Deflate-raw** | Yes | ~1.4 KB | Yes |
+| LZMA | No | ~50 KB+ | No |
+| Brotli | Decode only | ~1.4 KB | Yes, but can't encode |
+
+**Why not LZMA?** LZMA (used in 7z, XZ) typically compresses 20-30% better than deflate. However:
+
+1. **Not browser-native.** The Compression Streams API only supports `gzip`, `deflate`, and `deflate-raw`. LZMA requires bundling a JavaScript library.
+
+2. **Library size kills Card #0.** LZMA decompression libraries (lzma-js, etc.) are 50KB+ minified. The decoder would be ~35x larger than the QR code capacity.
+
+3. **Marginal gains on small content.** Arklet content is already constrained to ~2.5KB (QR limit). LZMA might save 200-400 bytes per card — meaningful for large files, negligible here.
+
+4. **Self-bootstrap breaks.** The entire point of Card #0 is that one QR scan gives you the decoder forever. A 50KB decoder can't fit in a QR code, so you'd need a server or app to distribute it — defeating the purpose.
+
+**The tradeoff:** We accept slightly worse compression to keep the decoder under 1.5KB. This preserves the core property: a printed card set is fully self-contained, readable with just a phone camera.
 
 Deflate via `CompressionStream`/`DecompressionStream` is the clear winner:
-- Zero external dependencies — it's built into every modern browser
+- Zero external dependencies — built into every modern browser
 - The decoder is under 1,500 bytes of raw HTML
 - Both encoding and decoding are natively supported
+- Card #0 works as designed
 
 ## QR Code Capacity
 
